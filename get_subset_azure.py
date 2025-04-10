@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2025 Natalie Balashov
+
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
