@@ -92,7 +92,7 @@ class FRState(Enum):
     RUNNING = 4
     COMPLETE = 5
 
-class FunctionRequest:
+class Request:
     request_id: int
     name: str
     exec_time: int
@@ -117,7 +117,7 @@ class FunctionRequest:
         self.fr_state = FRState.ARRIVED.value
 
     def __str__(self) -> str:
-        return 'FunctionRequest(%d, %s)' % (self.request_id, self.name)
+        return 'Request(%d, %s)' % (self.request_id, self.name)
 
     def __repr__(self):
         return self.__str__()
@@ -125,15 +125,15 @@ class FunctionRequest:
 
 class Instance:
     is_idle: bool
-    request: FunctionRequest
-    previous_requests: List[FunctionRequest]
+    request: Request
+    previous_requests: List[Request]
 
-    def __init__(self, request: FunctionRequest):
+    def __init__(self, request: Request):
         self.is_idle = False
         self.request = request
         self.previous_requests = list()
 
-    def accept_new_request(self, new_request: FunctionRequest):
+    def accept_new_request(self, new_request: Request):
         assert new_request.name == self.request.name # caller should do this check, but add safeguard here just in case
         self.previous_requests.append(self.request)
         self.request = new_request
@@ -149,8 +149,8 @@ class Instance:
 class NodeState:
     env: Environment
     ether_node: Node
-    instances: Dict[FunctionRequest, Instance]
-    queue: List[FunctionRequest]
+    instances: Dict[Request, Instance]
+    queue: List[Request]
     mem_usage: simpy.Container # in MiB
     cpu_use: simpy.Container
     overused_cpu_time_start: int
@@ -171,7 +171,7 @@ class NodeState:
         self.prev_cpu_use = 0
         self.measuring_interval = False
 
-    def enqueue(self, request: FunctionRequest):
+    def enqueue(self, request: Request):
         if len(self.queue) < params.QUEUE_LENGTH: # there's space in queue
             self.queue.append(request)
             yield self.env.timeout(params.QUEUE_DELAY)
@@ -183,7 +183,7 @@ class NodeState:
             wlogger(self.env, request.name, f'WARNING: {self.ether_node.name} queue was full, dropping request={request.request_id}')
             yield self.env.timeout(0)
 
-    def dequeue(self, request: FunctionRequest):
+    def dequeue(self, request: Request):
         assert len(self.queue) > 0
         self.queue.remove(request)
         ilogger(self.env, request.name, f'response sent, Proxy de-queued request={request.request_id}')
@@ -205,7 +205,7 @@ class NodeState:
         self.env.metrics.log_number_requests_in_flight(self.ether_node.name, self.env.now, len(num_requests))
         yield self.env.timeout(0)
 
-    def execute(self, request: FunctionRequest):
+    def execute(self, request: Request):
         ilogger(self.env, request.name, f'finished setting up new Instance for request={request.request_id}')
         ilogger(self.env, request.name, f'executing request={request.request_id} for {request.exec_time} ms, mem usage of {request.mem_use} MiB')
         request.fr_state = FRState.RUNNING.value
@@ -292,7 +292,7 @@ class NodeState:
         self.env.process(self.run_scheduler())
         dlogger(self.env, request.name, f'cleaned up request={request.request_id}, {self.mem_usage.level} MiB of RAM in use on node {self.ether_node.name}')
 
-    def invoke(self, request: FunctionRequest):
+    def invoke(self, request: Request):
         idle_instance = None
         if self.instances:
             for cur_req in self.instances: # Check for idling Instances that can be reused
@@ -334,7 +334,7 @@ class LoadBalancer:
         self.env = env
         self.loadbalancercounter = 0
 
-    def loadbalance(self, request: FunctionRequest):
+    def loadbalance(self, request: Request):
         chosen_node = self.env.node_states[self.loadbalancercounter]
         self.loadbalancercounter = (self.loadbalancercounter + 1) % len(self.env.node_states)
         ilogger(self.env, request.name, f'load balancer dispatching request={request.request_id} to {chosen_node.name}')
@@ -346,7 +346,7 @@ class Benchmark():
         self.filename = filename
         self.prev_arrival_time = 0
 
-    def receive_request(self, env: Environment, loadbalancer: LoadBalancer, request: FunctionRequest):
+    def receive_request(self, env: Environment, loadbalancer: LoadBalancer, request: Request):
         ilogger(env, request.name, 'new function request arrived at L4 load balancer')
         yield env.process(loadbalancer.loadbalance(request))
 
@@ -360,7 +360,7 @@ class Benchmark():
                 execution_time = int(line[2])
                 memory_use = int(line[3])
                 core_use = int(line[4])
-                request = FunctionRequest(app_name, execution_time, memory_use, core_use)
+                request = Request(app_name, execution_time, memory_use, core_use)
                 start_delay = arrival_time - self.prev_arrival_time
                 theproc = start_delayed(env, self.receive_request(env, loadbalancer, request), delay=start_delay)
                 self.prev_arrival_time = arrival_time
