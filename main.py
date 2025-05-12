@@ -41,7 +41,7 @@ def main(workload_filename):
     df = sim.env.metrics.extract_dataframe('dequeue_timestamp')
     df.to_csv(f'df_dequeue.csv', sep=',')
 
-    df = sim.env.metrics.extract_dataframe('exec_start_time')
+    df = sim.env.metrics.extract_dataframe('cpu_use')
     df.to_csv(f'df_cpu_use.csv', sep=',')
 
     df = sim.env.metrics.extract_dataframe('queuelength')
