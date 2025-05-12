@@ -1,7 +1,7 @@
-DiscreteSim
-===========
+Discrete App Simulator
+=====================
 
-DiscreteSim is a serverless simulator inspired by [faas-sim](https://github.com/edgerun/faas-sim).
+Discrete App Simulator is a serverless simulator inspired by [faas-sim](https://github.com/edgerun/faas-sim).
 
 Running a simulation
 --------------------
@@ -19,3 +19,6 @@ The provided `workload.csv` file was generated from the
 [2021 Azure data trace](https://github.com/Azure/AzurePublicDataset/blob/master/AzureFunctionsInvocationTrace2021.md)
 using the script `get_subset_azure.py`.
 Any CSV file with the required fields may be inputted to the simulator instead.
+
+[This paper](https://open.library.ubc.ca/soa/cIRcle/collections/undergraduateresearch/52966/items/1.0448503)
+describes the simulator in detail.
